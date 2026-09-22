@@ -1,0 +1,12 @@
+# Isabelle
+isabelle/.isabelle/
+**/*.thy~
+# scratch
+*.tmp
+
+# LaTeX build intermediates
+SUBMISSION_READY_NDSS2028/*.out
+SUBMISSION_READY_NDSS2028/*.aux
+SUBMISSION_READY_NDSS2028/*.bbl
+SUBMISSION_READY_NDSS2028/*.log
+SUBMISSION_READY_NDSS2028/*.blg

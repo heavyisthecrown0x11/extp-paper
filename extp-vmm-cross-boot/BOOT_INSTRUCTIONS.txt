@@ -1,0 +1,105 @@
+Cross-Boot Stability Collection — Boot Artifacts (paper, Evaluation)
+===================================================================
+
+Note. This protocol and these images were prepared for an N=100 collection.
+The hardware became unavailable before that run took place; the paper reports
+the N=34 archive collected earlier (7 May 2026) with an earlier run of this
+collection protocol. The N=34 summary is reproduced at the end of this file.
+
+Build date  : 2026-05-18 14:09
+Hardware    : Intel 12th Gen Alder Lake, microcode 0x3e, ASUS Z690
+              FT232RL serial console, P-state locked @ 4.9 GHz turbo
+Cross-boot  : EXTP_CROSS_BOOT_N = 100 (main.c:94)
+              CMOS-persistent boot counter
+              Per-boot 98 TIMING_RAW samples + BOOT_START/BOOT_END markers
+
+────────────────────────────────────────────────────────────────────
+LAYOUT (flat — GRUB-friendly, canonical names in a single directory)
+────────────────────────────────────────────────────────────────────
+
+  BOOT_INSTRUCTIONS.txt
+  kernel-x86_64-pc99                       (3.3 MB, shared by both steps)
+  extp-vmm-image-x86_64-pc99               (881 KB, CROSS-BOOT — canonical
+                                            name; this is what GRUB loads)
+  extp-vmm-image-x86_64-pc99.reset         (874 KB, RESET utility — activated
+                                            by manual rename)
+
+GRUB always loads the rootserver named `extp-vmm-image-x86_64-pc99`.
+The mode is therefore selected by which build sits under that name on
+the USB stick.
+
+────────────────────────────────────────────────────────────────────
+STEP 1 — RESET: zero the CMOS counter (one-off)
+────────────────────────────────────────────────────────────────────
+
+While preparing the USB stick:
+
+  # rename the .reset build to the canonical name:
+  mv  extp-vmm-image-x86_64-pc99           extp-vmm-image-x86_64-pc99.crossboot
+  cp  extp-vmm-image-x86_64-pc99.reset     extp-vmm-image-x86_64-pc99
+
+  # flash to USB: kernel-x86_64-pc99 + extp-vmm-image-x86_64-pc99
+
+Flash to hardware → boot → runs once:
+
+  [EXTp][CMOS] self-test OK
+  [EXTp][CMOS] boot_count reset → 0
+  [EXTp][HALT] reset utility complete
+
+────────────────────────────────────────────────────────────────────
+STEP 2 — CROSS-BOOT: N=100 collection
+────────────────────────────────────────────────────────────────────
+
+Re-prepare the USB stick:
+
+  # restore the cross-boot build under the canonical name:
+  cp  extp-vmm-image-x86_64-pc99.crossboot  extp-vmm-image-x86_64-pc99
+
+  # flash to USB: kernel-x86_64-pc99 + extp-vmm-image-x86_64-pc99
+  # (the kernel is already on the stick; only the rootserver image is overwritten)
+
+Start the serial logger:
+
+  picocom -b 115200 /dev/ttyUSB0 \
+      | tee boot_logN100_final.txt
+
+Flash to hardware → power-cycle loop → 100 boots run automatically:
+
+  Boot N (N=0..99):
+    [EXTp][BOOT] boot_count=N (target N=100)
+    BOOT_START boot=N
+    [EXTp][TIMING_RAW] sample=0 delta=...
+    ... (98 samples)
+    BOOT_END boot=N
+
+  Halt at boot 100:
+    [EXTp][BOOT] boot_count=100 (target N=100)
+    CROSS_BOOT_COMPLETE n=100
+    [EXTp][HALT] cross-boot collection complete
+
+Duration: ~30 minutes (10-20 s/boot × 100).
+Final log: ~10 MB.
+
+────────────────────────────────────────────────────────────────────
+PASS GATE (host-side analysis, after the run)
+────────────────────────────────────────────────────────────────────
+
+Sanity checks:
+  grep -c 'BOOT_START' boot_logN100_final.txt   # = 100
+  grep -c 'BOOT_END'   boot_logN100_final.txt   # = 100
+  grep -c 'TIMING_RAW' boot_logN100_final.txt   # = 9800 (100 × 98)
+  grep 'CROSS_BOOT_COMPLETE' boot_logN100_final.txt
+
+Stats:
+  python3 cross_boot_aggregate.py boot_logN100_final.txt
+
+N=34 archive reference (boot_logN34_archive.txt, 7 May 2026):
+  Mean of means:       18,599,092.5 cycle
+  Stdev of means:           433.3 cycle
+  Within-boot avg:        3,066.6 cycle
+  Ratio (cross/within):       0.1413
+  Hypothesis (ratio < 0.10):  NOT SUPPORTED at N=34
+
+At N=100 the variance estimates would be tighter, settling whether the
+true ratio lies below or above 0.10. This is orthogonal to the paper's
+SOE score (score_S = 1.0000 over the N=34 cross-boot trials).

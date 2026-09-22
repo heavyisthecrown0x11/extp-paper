@@ -1,0 +1,13 @@
+session "EXTp_CST" = "HOL" +
+  description \<open>
+    EXTp Counterfactual Soundness Theorem -- Isabelle/HOL mechanization.
+    Conditional core (Phases 0-2) + witness separation (b) + A2 scope-completeness (d)
+    + witness-sensitive ensemble (f) + real sweep data (h) + silent-leak
+    scope boundary (i) + seL4 interface skeleton (g). Observable surface as 64/32-bit words (e).
+    Section 8 (2026-09-01): composition in W/K_fwk form + trace-threaded Prop 1 (115 facts).
+  \<close>
+  options [document = false]
+  sessions
+    "HOL-Library"
+  theories
+    CST_Model
